@@ -4,19 +4,14 @@ const crypto=require('crypto')
 const {header,payload,signature,schema_name,schema,asSchema}=name_space;
 
 const schemaValidator={
-    [schema_name](val){
-      return {type:'string',devalue:'default'}
-    },
-    [schema](){
-       return{type:'object'}
-    }
+
 }
 class Schema {
     constructor(name, asSchema) {
         this[schema_name] = name;
         this[schema] = this.parseSchema(asSchema)
         this[asSchema] =asSchema
-        return validator(this, schemaValidator)
+        return validator(asSchema, schemaValidator)
     }
     get name() {
         return this[schema_name]
@@ -24,28 +19,31 @@ class Schema {
     get schema() {
         return this[schema]
     }
-    sign(schema=this[schema],data) {
-      let  {alg,encodeString}= this.bindData(schema,data)
+    sign(data,reschema) {
+        if(!reschema)
+           reschema=this[schema]
+      let  {alg,encodeString}= this.bindData(reschema,data)
       let jwt  =   this.encrypt(alg,encodeString,this[schema].key)
-        console.log(jwt);
+       return jwt;
     }
 
     bindData({header,payload}, data) {
         payload = Object.assign(data, payload);
-        let encodeString = Buffer.form(header).toString('base64') + '.' + Buffer().form(payload).toString('base64');
+        let encodeString = Buffer.from(JSON.stringify(header)).toString('base64') + '.' + Buffer.from(JSON.stringify(payload)).toString('base64');
         return {alg:header.alg, encodeString:encodeString}
     }
-    encrypt(alg,encodeString,...key){
-        let key,pubKey,priKey
-        let signature
-        let sign = crypto.createSign('RSA-SHA256');
-        sign.update(encodeString);
-        signature = sign.sign(key, 'hex');
-        return jwt = encodeString + '.' + signature;
+    encrypt(alg,encodeString,key){
+
+        let  signature= crypto.createHmac('SHA256', key).update(encodeString).digest('base64');
+        let jwt = encodeString + '.' + signature;
+        return jwt
     }
     parseSchema(schema){
-        let header,payload;
-        for (let {key, val}of schema) {
+        let header={},payload={};
+        schema.type=schema.type||'JWT'
+        schema.algorithm=schema.algorithm||'RSA-SHA256'
+        for (let key in schema) {
+            let val=schema[key]
             if (val === false) {
                 continue
             }
@@ -81,12 +79,25 @@ class Schema {
         return {header:header,payload:payload,key:schema.key}
     }
     load(schama){
+        if(schema.secret&&schema.secret!=asSchema.secret){
+            throw Error('secret cannot be reset ')
+        }
+        if(schema.algorithm&&schema.algorithm!=asSchema.algorithm){
+            throw Error('algorithm  cannot be reset ')
+        }
         let _schema = Object.assign(this[asSchema],this[asSchema]);
         this[asSchema]=_schema;
         let schema=this.parseSchema(this[_schema]);
-        return function (data) {
-            this.sign(schema,data);
+        let self=this
+        let sign=function (data) {
+            self.sign( data,schema);
         }
+        return {sign:sign}
+    }
+    verity(token){
+       let tokenArray;
+       tokenArray= token.split('.');
+
     }
 }
 

@@ -10,12 +10,19 @@ module.exports={
         if(schemaMap.has(name)){
             throw Error(`The schama (${name}) already exists`);
         }
-        return new Schema(name,schema)
+        let aschema=new Schema(name,schema)
+        schemaMap.set(name,aschema)
+        return aschema
     },
     sign(data,schema){
-        return new Schema(false,schema).sign(data)
+        return new Schema(false,schema).sign(data,undefined)
     },
     verity(token,schema){
         return new Schema(false,schema).verity(token)
+    },
+    getSchema(name){
+        if(!schemaMap.get(name)) {
+            throw Error(`The schama(${name}) not find`);
+        }
     }
 }
