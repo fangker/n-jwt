@@ -1,17 +1,14 @@
-const {symbol,validator}=require('./util')
-const name_space=symbol('header','payload','signature','schema_name','schema','asSchema');
+const {symbol}=require('./util')
+const name_space=symbol('header','payload','signature','schema_name','schema','asSchema','mode');
 const crypto=require('crypto')
-const {header,payload,signature,schema_name,schema,asSchema}=name_space;
+const {header,payload,signature,schema_name,schema,asSchema,mode}=name_space;
 
-const schemaValidator={
 
-}
 class Schema {
     constructor(name, asSchema) {
         this[schema_name] = name;
         this[schema] = this.parseSchema(asSchema)
-        this[asSchema] =asSchema
-        return validator(asSchema, schemaValidator)
+        return this;
     }
     get name() {
         return this[schema_name]
@@ -34,14 +31,18 @@ class Schema {
     }
     encrypt(alg,encodeString,key){
 
-        let  signature= crypto.createHmac('SHA256', key).update(encodeString).digest('base64');
+        let  signature= crypto.createHash('SHA256', key).update(encodeString).digest('base64');
         let jwt = encodeString + '.' + signature;
         return jwt
+    }
+    decrypt(alg,encodeString,key){
+        let  decodeString= crypto.createHash('SHA256', key).update(encodeString).digest('base64');
+        return decodeString;
     }
     parseSchema(schema){
         let header={},payload={};
         schema.type=schema.type||'JWT'
-        schema.algorithm=schema.algorithm||'RSA-SHA256'
+        schema.algorithm=schema.algorithm||'SHA256'
         for (let key in schema) {
             let val=schema[key]
             if (val === false) {
@@ -78,26 +79,22 @@ class Schema {
         }
         return {header:header,payload:payload,key:schema.key}
     }
-    load(schama){
-        if(schema.secret&&schema.secret!=asSchema.secret){
-            throw Error('secret cannot be reset ')
+    verity(token,key){
+        if(!key){
+            key=this[schema].key
         }
-        if(schema.algorithm&&schema.algorithm!=asSchema.algorithm){
-            throw Error('algorithm  cannot be reset ')
-        }
-        let _schema = Object.assign(this[asSchema],this[asSchema]);
-        this[asSchema]=_schema;
-        let schema=this.parseSchema(this[_schema]);
-        let self=this
-        let sign=function (data) {
-            self.sign( data,schema);
-        }
-        return {sign:sign}
-    }
-    verity(token){
        let tokenArray;
        tokenArray= token.split('.');
-
+       let decodeString  = Buffer.from(tokenArray[0],'base64').toString('base64')+'.'+ Buffer.from(tokenArray[1],'base64').toString('base64')
+      if(this.decrypt('alg',decodeString,key)==Buffer.from(tokenArray[2],'base64').toString('base64')){
+           let jwt={
+               header:JSON.parse(Buffer.from(tokenArray[0],'base64').toString()),
+               payload:JSON.parse(Buffer.from(tokenArray[1],'base64').toString()),
+           }
+       return jwt
+      }else{
+          return false
+      }
     }
 }
 

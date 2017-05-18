@@ -1,6 +1,7 @@
 const {symbol}=require('./util')
 const {header,payload,signature}=symbol('header','payload','signature');
 const Schema=require('./schema');
+
 let schemaMap=new Map();
 
 
@@ -14,10 +15,10 @@ module.exports={
         schemaMap.set(name,aschema)
         return aschema
     },
-    sign(data,schema){
+    Sign(data,schema){
         return new Schema(false,schema).sign(data,undefined)
     },
-    verity(token,schema){
+    Verity(token,schema){
         return new Schema(false,schema).verity(token)
     },
     getSchema(name){
